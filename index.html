@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valorant Premium Night Market Simulator</title>
+    <!-- Tailwind CSS v4 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        
+        body {
+            font-family: 'Oswald', sans-serif;
+            background: url('https://i.postimg.cc/MK9fR8WX/Fx9Dx-R5Xs-AAVk-HE.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+
+        .font-sans-custom {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* Tối ưu hiệu ứng lật 3D chuyên nghiệp */
+        .perspective {
+            perspective: 1200px;
+        }
+        .card-inner {
+            transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            will-change: transform;
+        }
+        .card.revealed .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .card-front {
+            transform: rotateY(180deg);
+        }
+
+        /* Lưới nền công nghệ chìm cho mặt thẻ bài */
+        .tech-grid {
+            background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen flex flex-col items-center justify-between p-6 selection:bg-red-500 bg-black/70 backdrop-blur-xs">
+
+    <!-- Khởi tạo Web Audio API để phát âm thanh mà không cần file ngoài -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'flip') {
+                // Âm thanh lật thẻ (Vút nhẹ)
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'roll') {
+                // Âm thanh cuộn/làm mới chợ (Sci-Fi Equip)
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(450, audioCtx.currentTime + 0.15);
+                osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.4);
+                
+                // Bộ lọc tiếng bớt chói
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+                
+                osc.disconnect(gain);
+                osc.connect(filter);
+                filter.connect(gain);
+
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            }
+        }
+    </script>
+
+    <!-- HEADER CHÍNH -->
+    <header class="text-center mt-4 mb-6 z-10 animate-fade-in flex flex-col items-center">
+        <h1 class="text-6xl font-bold tracking-[0.25em] text-white uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+            NIGHT <span class="text-red-500">MARKET</span>
+        </h1>
+        
+        <!-- Đồng hồ đếm ngược phong cách Valorant HUD -->
+        <div class="mt-2.5 px-4 py-1 bg-red-950/30 border border-red-500/30 rounded-xs flex items-center gap-2 shadow-[0_0_15px_rgba(239,68,68,0.05)]">
+            <span class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
+            <p class="text-gray-300 text-sm font-sans-custom tracking-wider font-bold uppercase">
+                Chợ kết thúc sau: <span id="countdown-timer" class="text-red-400 font-mono tracking-normal ml-1">30đ 00g 00p 00gi</span>
+            </p>
+        </div>
+
+        <div class="h-[2px] w-32 bg-gradient-to-r from-transparent via-red-500 to-transparent mx-auto mt-4"></div>
+        <p class="text-gray-400 text-[10px] mt-2.5 tracking-widest font-sans-custom uppercase font-semibold opacity-60">
+            Valorant Gacha Simulator • Premium Edition
+        </p>
+    </header>
+
+    <!-- KHU VỰC THẸ BÀI CHÍNH -->
+    <main class="w-full max-w-7xl px-4 my-auto z-10 flex items-center justify-center">
+        <div id="market-container" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5 w-full">
+            <!-- Render động bằng JS -->
+        </div>
+    </main>
+
+    <!-- KHU VỰC ĐIỀU KHIỂN & NÚT BẤM -->
+    <footer class="mb-6 mt-8 flex flex-col items-center gap-3 z-10 w-full font-sans-custom">
+        <div class="flex flex-wrap gap-4 justify-center">
+            
+            <!-- Nút Làm Mới Chợ -->
+            <button onclick="playSound('roll'); generateNightMarket();" class="group relative px-8 py-3.5 bg-black/60 border border-red-500/60 text-red-400 font-bold tracking-widest uppercase text-sm rounded-sm transition-all duration-300 hover:bg-red-500 hover:text-white hover:border-red-500 active:scale-95 cursor-pointer overflow-hidden shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_25px_rgba(239,68,68,0.4)]">
+                <span class="relative z-10">Làm mới chợ</span>
+                <div class="absolute inset-0 -translate-x-full group-hover:translate-x-0 bg-gradient-to-r from-red-600 to-red-500 transition-transform duration-300 ease-out -z-0"></div>
+            </button>
+            
+            <!-- Nút Mở Tất Cả -->
+            <button onclick="revealAllCards()" class="group relative px-8 py-3.5 bg-black/60 border border-amber-500/60 text-amber-400 font-bold tracking-widest uppercase text-sm rounded-sm transition-all duration-300 hover:bg-amber-500 hover:text-black hover:border-amber-500 active:scale-95 cursor-pointer overflow-hidden shadow-[0_0_15px_rgba(245,158,11,0.1)] hover:shadow-[0_0_25px_rgba(245,158,11,0.4)]">
+                <span class="relative z-10">Mở tất cả thẻ</span>
+                <div class="absolute inset-0 -translate-x-full group-hover:translate-x-0 bg-gradient-to-r from-amber-500 to-amber-400 transition-transform duration-300 ease-out -z-0"></div>
+            </button>
+
+        </div>
+    </footer>
+
+    <script>
+        // Xử lý logic đếm ngược tự động 30 ngày từ lúc bắt đầu chạy
+        const targetDate = new Date().getTime() + (30 * 24 * 60 * 60 * 1000);
+
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const distance = targetDate - now;
+
+            if (distance < 0) {
+                document.getElementById("countdown-timer").innerHTML = "ĐÃ HẾT HẠN";
+                return;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            // Định dạng chuỗi hiển thị số có 2 chữ số (ví dụ: 05g thay vì 5g)
+            const pad = (num) => String(num).padStart(2, '0');
+
+            document.getElementById("countdown-timer").innerHTML = 
+                `${days}đ ${pad(hours)}g ${pad(minutes)}p ${pad(seconds)}gi`;
+        }
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+
+        const skinDatabase = {
+            green: [
+                { name: "Prism II Vandal", price: 875, img: "https://i.postimg.cc/x8LNMrpb/image-1-removebg-preview.png" },
+                { name: "Galleria Phantom", price: 875, img: "https://i.postimg.cc/252nHfwb/Galleria-Phantom.webp" },
+                { name: "Sensation Odin", price: 875, img: "https://i.postimg.cc/Y9TR3Hrv/valorant-chroma-sensation-odin-full.webp" },
+                { name: "Holomoku Vandal", price: 1750, img: "https://i.postimg.cc/5yc5zSgX/Holomoku-Vandal.webp" }
+            ],
+            blue: [
+                { name: "Smite Ghost", price: 1275, img: "https://i.postimg.cc/762j3X3C/ghost-removebg-preview-(1).png" },
+                { name: "Infantry Guardian", price: 1275, img: "https://i.postimg.cc/zfmBw2Wn/z7841218347201-ceedf12d10fff070d612c844b1eec0e7-removebg-preview.png" },
+                { name: "Sakura Vandal", price: 1275, img: "https://i.postimg.cc/Tw6Js98J/sakura-vandal-skin-v0-d24i7dlmf6i51-removebg-preview.png" },
+                { name: "Wasteland Vandal", price: 1275, img: "https://i.postimg.cc/X7GBwCmC/Wasteland-Vandal-removebg-preview.png" },
+                { name: "Fortune's Hand Ghost", price: 1275, img: "https://i.postimg.cc/k5zgM1Ms/images-4-removebg-preview.png" },
+                { name: "Luxe Operator", price: 1275, img: "https://i.postimg.cc/HLyCzpHX/images-5-removebg-preview.png" },
+                { name: "Sys Vandal", price: 1275, img: "https://i.postimg.cc/mg1qf8nj/SYS-Vandal.webp" }
+            ],
+            purple: [
+                { name: "Reaver Vandal", price: 1775, img: "https://i.postimg.cc/Dwb2jQPz/vandal-skin-3-2cd2cdf493-removebg-preview.png" },
+                { name: "Reaver Phantom", price: 1775, img: "https://i.postimg.cc/6QfxgM2w/FZu-LC2c-WIAYyl-YI.png" },   
+                { name: "Reaver Sheriff", price: 1775, img: "https://i.postimg.cc/SKTgtP7h/Reaver-Sheriff.webp" },
+                { name: "Reaver Ghost", price: 1775, img: "https://i.postimg.cc/SsPTv9rM/Reaver-Ghost.png" },
+                { name: "Xerofang Vandal", price: 1775, img: "https://i.postimg.cc/jd49sDqp/XER-FANG-Vandal.webp" },
+                { name: "Valiant Hero Vandal", price: 1775, img: "https://i.postimg.cc/WbsV6LhY/Valiant-Hero-Vandal.webp" },
+                { name: "Prime Classic", price: 1775, img: "https://i.postimg.cc/SKMHbDnS/Prime-Classic.webp" },
+                { name: "Prime Spectre", price: 1775, img: "https://i.postimg.cc/hvp51YYW/prime-spectre-skin.png" }, 
+                { name: "Prime Vandal", price: 1775, img: "https://i.postimg.cc/NjLWpgYz/Prime-Vandal.webp" },
+                { name: "Oni Phantom", price: 1775, img: "https://i.postimg.cc/63Sc0GVG/valorant-oni-phantom.png" },
+                { name: "Oni Vandal", price: 1775, img: "https://i.postimg.cc/jqpvnPSS/oni-vandal-valorant-full-skin-698848.webp" },
+                { name: "Ion Phantom", price: 1775, img: "https://i.postimg.cc/QCdDpwbm/valorant-ion-phantom-weapon-skin-large.webp" },
+                { name: "Ion Vandal", price: 1775, img: "https://i.postimg.cc/J7ZZggRm/Ion-Vandal.webp" },
+                { name: "Neptune Vandal", price: 1775, img: "https://i.postimg.cc/sgVL17TZ/Neptune-Vandal.webp" },
+                { name: "Recon Phantom", price: 1775, img: "https://i.postimg.cc/44QbyMq8/recon-phantom-valorant-full-skin-154455.webp" },
+                { name: "Gaia Vandal", price: 1775, img: "https://i.postimg.cc/d1KNPCZw/Gaia-s-Vengeance-Vandal.webp" },
+                { name: "Magepunk Vandal", price: 1775, img: "https://i.postimg.cc/QtQfmMt1/magepunk-vandal-valorant-full-skin-793839.webp" },
+                { name: "Forsaken Vandal", price: 1775, img: "https://i.postimg.cc/KYX4bcGX/forsaken-vandal-level-4variant-1-gold-valorant-full-skin-154321.webp" }
+            ],
+            yellow: [
+                { name: "Prime//2.0 Karambit", price: 3550, img: "https://i.postimg.cc/xdjyKPmX/Prime-2-0-Karambit.webp" },
+                { name: "Yoru Butterfly Comb", price: 3550, img: "https://i.postimg.cc/x8GcxwDQ/yorus-stylish-butterfly-comb-valorant-full-skin-154991.webp" },
+                { name: "Reaver Karambit", price: 3550, img: "https://i.postimg.cc/Mn0C2mWt/reaver-karambit.png" },
+                { name: "Celestial Fan", price: 3550, img: "https://i.postimg.cc/Ssy5Y8Sz/celestial-fan-valorant-full-skin-155030.webp" },
+                { name: "Khô Gà Mixi Food", price: 3550, img: "https://i.postimg.cc/L5tCv399/images-17-removebg-preview.png" },
+                { name: "Sovereign Sword", price: 3550, img: "https://i.postimg.cc/KYLk3kqT/Sovereign-Sword-removebg-preview.png" },
+                { name: "Smite Hammer", price: 1750, img: "https://i.postimg.cc/D0ndfkTj/Smite-Hammer.webp" },
+                { name: "Smite Knife", price: 1750, img: "https://i.postimg.cc/rsssNQCR/Smite-Knife.webp" },
+                { name: "Prime Axe", price: 3550, img: "https://i.postimg.cc/bNT8wQQx/Prime-Axe.webp" },
+                { name: "Black Market Butterfly", price: 3550, img: "https://i.postimg.cc/Qd26LzFG/Black-Market-Butterfly-Knife.webp" },
+                { name: "Xenohunter Knife", price: 3550, img: "https://i.postimg.cc/dQfVKRjj/Xenohunter-Knife.webp" },
+                { name: "Magepunk-Sparkswitch", price: 3550, img: "https://i.postimg.cc/y8yJBgd3/Magepunk-Sparkswitch.webp" },
+                { name: "Minima Karambit", price: 3550, img: "https://i.postimg.cc/Dz3cpbN8/Minima-Karambit.webp" },
+                { name: "Aemondir Sword", price: 3550, img: "https://i.postimg.cc/dQh41vr6/Blade-of-Aemondir-Silver.webp" },
+                { name: "Oni Claw", price: 3550, img: "https://i.postimg.cc/t4phjz2r/oni-claw-valorant-full-skin-155043.webp" }
+            ]
+        };
+
+        const tiers = {
+            green: { 
+                glow: "shadow-[0_0_20px_rgba(0,245,153,0.25)] border-[#00f599]/70 text-[#00f599] bg-[#00f599]/5", 
+                label: "Select Edition", 
+                rate: 0.40,
+                backImg: "https://i.postimg.cc/3d6yXLK3/image.png" 
+            },
+            blue: { 
+                glow: "shadow-[0_0_20px_rgba(32,163,234,0.25)] border-[#20a3ea]/70 text-[#20a3ea] bg-[#20a3ea]/5", 
+                label: "Deluxe Edition", 
+                rate: 0.35,
+                backImg: "https://i.postimg.cc/5jKjJPQz/image.png" 
+            },
+            purple: { 
+                glow: "shadow-[0_0_25px_rgba(209,43,230,0.3)] border-[#d12be6]/70 text-[#d12be6] bg-[#d12be6]/5", 
+                label: "Premium Edition", 
+                rate: 0.20,
+                backImg: "https://i.postimg.cc/wycJFDwF/image.png" 
+            },
+            yellow: { 
+                glow: "shadow-[0_0_30px_rgba(251,202,54,0.45)] border-[#fbca36] text-[#fbca36] bg-[#fbca36]/10", 
+                label: "Exclusive Melee", 
+                rate: 0.05,
+                backImg: "https://i.postimg.cc/rR14nxg5/image.png" 
+            }
+        };
+
+        function getRandomTier() {
+            const roll = Math.random();
+            let cumulativeRate = 0;
+            for (const [tierName, tierInfo] of Object.entries(tiers)) {
+                cumulativeRate += tierInfo.rate;
+                if (roll < cumulativeRate) return tierName;
+            }
+            return "green"; 
+        }
+
+        function getRandomDiscount() {
+            return Math.floor(Math.random() * (49 - 11 + 1)) + 11;
+        }
+
+        function generateNightMarket() {
+            const container = document.getElementById("market-container");
+            container.innerHTML = ""; 
+            const chosenSkinNames = [];
+
+            for (let i = 0; i < 6; i++) {
+                let tier, randomSkin;
+                let attempts = 0; 
+
+                do {
+                    tier = getRandomTier();
+                    const skinsInTier = skinDatabase[tier];
+                    randomSkin = skinsInTier[Math.floor(Math.random() * skinsInTier.length)];
+                    attempts++;
+                } while (chosenSkinNames.includes(randomSkin.name) && attempts < 100);
+
+                chosenSkinNames.push(randomSkin.name);
+
+                const tierInfo = tiers[tier];
+                const discount = getRandomDiscount();
+                const originalPrice = randomSkin.price;
+                const discountedPrice = Math.floor(originalPrice * (1 - discount / 100));
+
+                const cardDiv = document.createElement("div");
+                cardDiv.className = "card w-full perspective cursor-pointer group/card";
+                cardDiv.style = `aspect-ratio: 1 / 1.48;`; 
+                
+                cardDiv.innerHTML = `
+                    <div class="card-inner relative w-full h-full text-center rounded-md border border-white/5 bg-[#090b11] shadow-2xl flex flex-col justify-between">
+                        
+                        <div class="card-front tech-grid rounded-md border-2 ${tierInfo.glow} overflow-hidden bg-gradient-to-b from-[#0e121d] to-[#06080d] flex flex-col justify-between p-4.5">
+                            
+                            <div class="w-full flex justify-end z-10">
+                                <span class="text-[9px] uppercase px-2 py-0.5 rounded-xs bg-black/80 font-sans-custom tracking-widest font-extrabold border border-white/10 text-white/90">
+                                    ${tierInfo.label}
+                                </span>
+                            </div>
+                            
+                            <div class="absolute inset-0 w-full h-full z-0 flex items-center justify-center p-3">
+                                <img src="${randomSkin.img}" alt="${randomSkin.name}" class="w-full max-h-[50%] object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.8)] transition-transform duration-500 group-hover/card:scale-105">
+                                <div class="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#05070c] via-[#05070c]/70 to-transparent"></div>
+                            </div>
+
+                            <div class="w-full text-left z-10 font-sans-custom mt-auto">
+                                <h3 class="font-bold font-sans-custom tracking-wide line-clamp-2 uppercase text-xs mb-2.5 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
+                                    ${randomSkin.name}
+                                </h3>
+                                
+                                <div class="flex justify-between items-center bg-black/60 p-2 rounded-xs border border-white/5 backdrop-blur-xs">
+                                    <div class="text-left">
+                                        <div class="text-[10px] text-gray-500 line-through font-medium leading-none mb-1">${originalPrice} VP</div>
+                                        <div class="text-sm font-extrabold text-white tracking-wide flex items-center gap-1 leading-none">
+                                            <span class="text-xs text-red-400 font-sans font-bold">Ⓥ</span> ${discountedPrice.toLocaleString()}
+                                        </div>
+                                    </div>
+                                    <div class="text-xs font-extrabold text-red-500 bg-red-950/50 px-2 py-1 rounded-xs border border-red-500/20 shadow-[inset_0_0_6px_rgba(239,68,68,0.2)]">
+                                        -${discount}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-back rounded-md overflow-hidden border border-white/5 hover:border-red-500/30 transition-all duration-300 bg-[#070a10] shadow-inner">
+                            <img src="${tierInfo.backImg}" alt="Market Card Back" class="w-full h-full object-cover opacity-85 group-hover/card:opacity-100 transition-opacity duration-300 select-none pointer-events-none">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+                        </div>
+
+                    </div>
+                `;
+
+                cardDiv.addEventListener("click", function() {
+                    if (!this.classList.contains("revealed")) {
+                        playSound('flip');
+                        this.classList.add("revealed");
+                    }
+                });
+
+                container.appendChild(cardDiv);
+            }
+        }
+
+        function revealAllCards() {
+            const unrevealedCards = document.querySelectorAll('.card:not(.revealed)');
+            if(unrevealedCards.length > 0) {
+                playSound('flip');
+                unrevealedCards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.classList.add('revealed');
+                    }, index * 80);
+                });
+            }
+        }
+
+        window.onload = generateNightMarket;
+    </script>
+</body>
+</html>
