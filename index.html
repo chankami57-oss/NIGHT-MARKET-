@@ -52,50 +52,8 @@
 </head>
 <body class="text-white min-h-screen flex flex-col items-center justify-between p-6 selection:bg-red-500 bg-black/70 backdrop-blur-xs">
 
-    <!-- Khởi tạo Web Audio API để phát âm thanh mà không cần file ngoài -->
-    <script>
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        function playSound(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            if (type === 'flip') {
-                // Âm thanh lật thẻ (Vút nhẹ)
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.3);
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.3);
-            } else if (type === 'roll') {
-                // Âm thanh cuộn/làm mới chợ (Sci-Fi Equip)
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-                osc.frequency.linearRampToValueAtTime(450, audioCtx.currentTime + 0.15);
-                osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.4);
-                
-                // Bộ lọc tiếng bớt chói
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(800, audioCtx.currentTime);
-                
-                osc.disconnect(gain);
-                osc.connect(filter);
-                filter.connect(gain);
-
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.4);
-            }
-        }
-    </script>
+    <!-- Nhạc nền được cấu hình tự động lặp lại (loop) -->
+    <audio id="bg-audio" src="https://files.catbox.moe/rj1jjz.mp3" loop></audio>
 
     <!-- HEADER CHÍNH -->
     <header class="text-center mt-4 mb-6 z-10 animate-fade-in flex flex-col items-center">
@@ -129,7 +87,7 @@
         <div class="flex flex-wrap gap-4 justify-center">
             
             <!-- Nút Làm Mới Chợ -->
-            <button onclick="playSound('roll'); generateNightMarket();" class="group relative px-8 py-3.5 bg-black/60 border border-red-500/60 text-red-400 font-bold tracking-widest uppercase text-sm rounded-sm transition-all duration-300 hover:bg-red-500 hover:text-white hover:border-red-500 active:scale-95 cursor-pointer overflow-hidden shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_25px_rgba(239,68,68,0.4)]">
+            <button onclick="generateNightMarket();" class="group relative px-8 py-3.5 bg-black/60 border border-red-500/60 text-red-400 font-bold tracking-widest uppercase text-sm rounded-sm transition-all duration-300 hover:bg-red-500 hover:text-white hover:border-red-500 active:scale-95 cursor-pointer overflow-hidden shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_25px_rgba(239,68,68,0.4)]">
                 <span class="relative z-10">Làm mới chợ</span>
                 <div class="absolute inset-0 -translate-x-full group-hover:translate-x-0 bg-gradient-to-r from-red-600 to-red-500 transition-transform duration-300 ease-out -z-0"></div>
             </button>
@@ -144,6 +102,15 @@
     </footer>
 
     <script>
+        // Kích hoạt phát nhạc nền khi người dùng tương tác lần đầu với trang web (Trình duyệt bắt buộc)
+        window.addEventListener('click', () => {
+            const audio = document.getElementById('bg-audio');
+            if (audio.paused) {
+                audio.volume = 0.4; // Đặt âm lượng ở mức 40% cho vừa tai
+                audio.play();
+            }
+        }, { once: true });
+
         // Xử lý logic đếm ngược tự động 30 ngày từ lúc bắt đầu chạy
         const targetDate = new Date().getTime() + (30 * 24 * 60 * 60 * 1000);
 
@@ -161,7 +128,6 @@
             const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-            // Định dạng chuỗi hiển thị số có 2 chữ số (ví dụ: 05g thay vì 5g)
             const pad = (num) => String(num).padStart(2, '0');
 
             document.getElementById("countdown-timer").innerHTML = 
@@ -338,7 +304,6 @@
 
                 cardDiv.addEventListener("click", function() {
                     if (!this.classList.contains("revealed")) {
-                        playSound('flip');
                         this.classList.add("revealed");
                     }
                 });
@@ -350,7 +315,6 @@
         function revealAllCards() {
             const unrevealedCards = document.querySelectorAll('.card:not(.revealed)');
             if(unrevealedCards.length > 0) {
-                playSound('flip');
                 unrevealedCards.forEach((card, index) => {
                     setTimeout(() => {
                         card.classList.add('revealed');
